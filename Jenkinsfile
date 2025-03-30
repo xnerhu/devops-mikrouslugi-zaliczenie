@@ -42,7 +42,7 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Status test') {
             steps {
                 script {
                     sh 'curl -f http://localhost:8080 || exit 1'
