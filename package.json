@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node build/main.js",
     "build": "tsc",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
     "express": "^4.18.2"

@@ -11,7 +11,16 @@ pipeline {
         stage('Install Dependencies') {
           steps {
               script {
+                  sh 'npm install pnpm --global'
                   sh 'pnpm install'
+              }
+          }
+        }
+
+        stage('Lint') {
+          steps {
+              script {
+                  sh 'pnpm run lint'
               }
           }
         }
