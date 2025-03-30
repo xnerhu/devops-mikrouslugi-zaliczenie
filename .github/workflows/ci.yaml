@@ -1,4 +1,5 @@
 name: Jenkins Pipeline via apt
+
 on:
   push:
     branches: ["master"]
@@ -21,39 +22,42 @@ jobs:
           # Import Jenkins GPG key
           curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
             | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+
           # Add Jenkins repo
           echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" \
             | sudo tee /etc/apt/sources.list.d/jenkins.list
+
           # Update & install Jenkins
           sudo apt-get update
           sudo apt-get install -y jenkins
+
+          # Allow the 'jenkins' user to use Docker
+          # (Ubuntu runners come with Docker installed by default.)
+          sudo usermod -aG docker jenkins
+
           # Start Jenkins
           sudo systemctl start jenkins
+          # Give Jenkins time to start
           sleep 30
+          # Print status (don't fail if non-zero exit code)
           sudo systemctl status jenkins --no-pager || true
 
-      - name: Install Pipeline & Git plugins
+      - name: Install Pipeline, Git, and Docker Workflow plugins
         run: |
           PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
+
+          # Download Jenkins CLI
           curl -sSfL http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar -o jenkins-cli.jar
 
-          # Install the basic pipeline plugins + the Git plugin:
-          java -jar jenkins-cli.jar \
-            -auth "admin:${PASS}" \
-            -s http://127.0.0.1:8080/ install-plugin workflow-aggregator git
+          # Install Git plugin + Pipeline aggregator + Docker Workflow plugin
+          java -jar jenkins-cli.jar -auth "admin:${PASS}" -s http://127.0.0.1:8080/ install-plugin workflow-aggregator git docker-workflow
 
-          # You might also need to specify other plugins, for example:
-          #   workflow-scm-step, scm-api
-          # if they're missing for your Jenkins version:
-          #
-          # java -jar jenkins-cli.jar \
-          #   -auth "admin:${PASS}" \
+          # If you need additional dependencies (like workflow-scm-step, scm-api), install them similarly:
+          # java -jar jenkins-cli.jar -auth "admin:${PASS}" \
           #   -s http://127.0.0.1:8080/ install-plugin workflow-scm-step scm-api
 
           # Safely restart so Jenkins loads the new plugins
-          java -jar jenkins-cli.jar \
-            -auth "admin:${PASS}" \
-            -s http://127.0.0.1:8080/ safe-restart
+          java -jar jenkins-cli.jar -auth "admin:${PASS}" -s http://127.0.0.1:8080/ safe-restart
 
           # Wait for Jenkins to come back up
           sleep 60
@@ -62,9 +66,16 @@ jobs:
         run: |
           PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
           curl -sSfL http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar -o jenkins-cli.jar
-          java -jar jenkins-cli.jar -auth "admin:${PASS}" -s http://127.0.0.1:8080/ create-job MyPipeline < .github/jenkins_job.xml
+
+          java -jar jenkins-cli.jar \
+            -auth "admin:${PASS}" \
+            -s http://127.0.0.1:8080/ \
+            create-job MyPipeline < .github/jenkins_job.xml
 
       - name: Build the Jenkins pipeline
         run: |
           PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
-          java -jar jenkins-cli.jar -auth "admin:${PASS}" -s http://127.0.0.1:8080/ build MyPipeline -f -v
+          java -jar jenkins-cli.jar \
+            -auth "admin:${PASS}" \
+            -s http://127.0.0.1:8080/ \
+            build MyPipeline -f -v
