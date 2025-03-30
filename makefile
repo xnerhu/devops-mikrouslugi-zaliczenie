@@ -3,3 +3,6 @@ docker.build:
 
 docker.start:
 	docker run -it -p 8080:8080 registry.gitlab.com/nersent/cloud/devops-zaliczenie:0.0.1
+
+docker.deploy:
+	docker push registry.gitlab.com/nersent/cloud/devops-zaliczenie:0.0.1

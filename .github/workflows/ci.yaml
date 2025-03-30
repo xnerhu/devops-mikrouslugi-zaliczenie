@@ -12,13 +12,27 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Set up Jenkinsfile Runner
-        uses: jenkinsci/jfr-setup-action@master
-        with:
-          jenkins-version: "2.480"
+      - name: Install Java and Jenkins
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jdk
 
-      - name: Run Jenkins pipeline
-        uses: jenkinsci/jfr-runtime-action@master
-        with:
-          command: run
-          jenkinsfile: Jenkinsfile
+          curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo tee \
+            /usr/share/keyrings/jenkins-key.gpg > /dev/null
+          echo deb [signed-by=/usr/share/keyrings/jenkins-key.gpg] https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list
+
+          # Install Jenkins
+          sudo apt-get update
+          sudo apt-get install -y jenkins
+
+      - name: Start Jenkins
+        run: |
+          sudo systemctl start jenkins
+          # Wait a bit for Jenkins to finish starting
+          sleep 30
+          sudo systemctl status jenkins --no-pager
+
+      - name: Check Jenkins is running
+        run: |
+          # You can check port 8080 or Jenkins logs
+          curl -I http://localhost:8080 || exit 1
