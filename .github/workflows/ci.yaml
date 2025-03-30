@@ -14,6 +14,8 @@ jobs:
 
       - name: Set up Jenkinsfile Runner
         uses: jenkinsci/jfr-setup-action@master
+        with:
+          jenkins-version: "2.414.3"
 
       - name: Run Jenkins pipeline
         uses: jenkinsci/jfr-runtime-action@master

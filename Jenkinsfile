@@ -8,10 +8,17 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies & Test') {
+        stage('Install Dependencies') {
           steps {
               script {
                   sh 'pnpm install'
+              }
+          }
+        }
+
+        stage('Test') {
+          steps {
+              script {
                   sh 'pnpm test'
               }
           }

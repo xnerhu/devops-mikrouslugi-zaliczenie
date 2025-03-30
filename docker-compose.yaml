@@ -1,0 +1,27 @@
+version: "3.7"
+services:
+  db:
+    image: bitnami/postgresql
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=pace
+    ports:
+      - 5432:5432
+    volumes:
+      - ./out/db:/var/lib/postgresql/data
+
+  service:
+    build: .
+    container_name: node-app-test
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=example
+      - DB_PORT=5432
+      - DB_NAME=db
+    depends_on:
+      - db

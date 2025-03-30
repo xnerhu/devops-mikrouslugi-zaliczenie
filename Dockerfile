@@ -6,11 +6,13 @@ RUN npm install pnpm --global
 
 COPY package.json ./
 COPY pnpm-lock.yaml ./
-RUN pnpm install --production
+RUN pnpm install
 
 COPY . .
+
+RUN pnpm build
 
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["node", "start"]
+CMD ["npm", "start"]
