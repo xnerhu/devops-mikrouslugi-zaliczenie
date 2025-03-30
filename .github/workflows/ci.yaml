@@ -32,28 +32,30 @@ jobs:
           sleep 30
           sudo systemctl status jenkins --no-pager || true
 
-      - name: Install Pipeline plugins
+      - name: Install Pipeline & Git plugins
         run: |
-          # Jenkins must be running
-          # Grab the initial admin password so we can authenticate
           PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
-          # Download Jenkins CLI to manage plugins:
           curl -sSfL http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar -o jenkins-cli.jar
 
-          # The “workflow-aggregator” plugin essentially brings in the main pipeline plugins:
+          # Install the basic pipeline plugins + the Git plugin:
           java -jar jenkins-cli.jar \
             -auth "admin:${PASS}" \
-            -s http://127.0.0.1:8080/ install-plugin workflow-aggregator
+            -s http://127.0.0.1:8080/ install-plugin workflow-aggregator git
 
-          # Optionally: install other pipeline plugins if you need them
-          # java -jar jenkins-cli.jar -auth admin:$PASS -s http://127.0.0.1:8080/ install-plugin workflow-cps ...
+          # You might also need to specify other plugins, for example:
+          #   workflow-scm-step, scm-api
+          # if they're missing for your Jenkins version:
+          #
+          # java -jar jenkins-cli.jar \
+          #   -auth "admin:${PASS}" \
+          #   -s http://127.0.0.1:8080/ install-plugin workflow-scm-step scm-api
 
-          # We must restart Jenkins so the plugin can load:
+          # Safely restart so Jenkins loads the new plugins
           java -jar jenkins-cli.jar \
             -auth "admin:${PASS}" \
             -s http://127.0.0.1:8080/ safe-restart
 
-          # Wait a bit for Jenkins to come back:
+          # Wait for Jenkins to come back up
           sleep 60
 
       - name: Create Jenkins job using .github/jenkins_job.xml
