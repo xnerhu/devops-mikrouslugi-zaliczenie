@@ -1,0 +1,22 @@
+name: Jenkinsfile Runner CI
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+
+jobs:
+  jenkins-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Jenkinsfile Runner
+        uses: jenkinsci/jfr-setup-action@master
+
+      - name: Run Jenkins pipeline
+        uses: jenkinsci/jfr-runtime-action@master
+        with:
+          command: run
+          jenkinsfile: Jenkinsfile
