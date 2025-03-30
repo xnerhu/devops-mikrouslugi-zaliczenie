@@ -1,4 +1,4 @@
-name: Jenkins via apt
+name: Jenkins Pipeline via apt
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  install-and-run-jenkins:
+  ephemeral-jenkins:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -17,28 +17,40 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openjdk-11-jdk
 
-      - name: Import Jenkins GPG key and add Jenkins repo
+      - name: Import Jenkins GPG key & repo, then install Jenkins
         run: |
-          # Download and place the Jenkins GPG key in /usr/share/keyrings
+          # Acquire and place the Jenkins GPG key
           curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
             | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-
-          # Add Jenkins stable repository referencing its key
+          # Add Jenkins stable repo
           echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" \
             | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-
-          # Apt update and install Jenkins
+          # Update and install
           sudo apt-get update
           sudo apt-get install -y jenkins
 
       - name: Start Jenkins
         run: |
           sudo systemctl start jenkins
-          # Wait for Jenkins to come up
+          # Give Jenkins time to initialize
           sleep 30
-          # Print Jenkins status
+          # Print status (non-fatal if it fails)
           sudo systemctl status jenkins --no-pager || true
 
-      - name: Check Jenkins
+      - name: Create Jenkins job from .github/jenkins_job.xml
         run: |
-          curl -I http://localhost:8080
+          # Grab auto-generated admin password
+          PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
+          # Download Jenkins CLI locally
+          curl -sSfL http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar -o jenkins-cli.jar
+          # Create the job "MyPipeline"
+          java -jar jenkins-cli.jar \
+            -auth "admin:${PASS}" \
+            -s http://127.0.0.1:8080/ create-job MyPipeline < .github/jenkins_job.xml
+
+      - name: Build the Jenkins pipeline
+        run: |
+          PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
+          java -jar jenkins-cli.jar \
+            -auth "admin:${PASS}" \
+            -s http://127.0.0.1:8080/ build MyPipeline -f -v

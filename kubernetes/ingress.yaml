@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devops-website-ingress
+  namespace: ug
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  tls:
+    - hosts:
+        - ug.nersent.com
+      secretName: ug-tls
+  rules:
+    - host: ug.nersent.com
+      http:
+        paths:
+          - path: /devops(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: devops-website
+                port:
+                  number: 80

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-website
+  namespace: ug
+  labels:
+    app: devops-website
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-website
+  template:
+    metadata:
+      labels:
+        app: devops-website
+    spec:
+      imagePullPolicy: Always
+      containers:
+        - name: devops-website
+          image: registry.gitlab.com/nersent/cloud/devops-zaliczenie:0.0.1 # {"$imagepolicy": "flux-system:devops-website-policy"}
+          ports:
+            - containerPort: 80
+          env:
+            - name: PORT
+              value: "80"
+      imagePullSecrets:
+        - name: regcred
