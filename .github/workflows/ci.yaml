@@ -1,38 +1,44 @@
-name: Jenkinsfile Runner CI
+name: Jenkins via apt
+
 on:
   push:
     branches: ["master"]
   pull_request:
 
 jobs:
-  jenkins-pipeline:
+  install-and-run-jenkins:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Install Java and Jenkins
+      - name: Install Java
         run: |
           sudo apt-get update
           sudo apt-get install -y openjdk-11-jdk
 
-          curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo tee \
-            /usr/share/keyrings/jenkins-key.gpg > /dev/null
-          echo deb [signed-by=/usr/share/keyrings/jenkins-key.gpg] https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list
+      - name: Import Jenkins GPG key and add Jenkins repo
+        run: |
+          # Download and place the Jenkins GPG key in /usr/share/keyrings
+          curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
+            | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
 
-          # Install Jenkins
+          # Add Jenkins stable repository referencing its key
+          echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" \
+            | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+          # Apt update and install Jenkins
           sudo apt-get update
           sudo apt-get install -y jenkins
 
       - name: Start Jenkins
         run: |
           sudo systemctl start jenkins
-          # Wait a bit for Jenkins to finish starting
+          # Wait for Jenkins to come up
           sleep 30
-          sudo systemctl status jenkins --no-pager
+          # Print Jenkins status
+          sudo systemctl status jenkins --no-pager || true
 
-      - name: Check Jenkins is running
+      - name: Check Jenkins
         run: |
-          # You can check port 8080 or Jenkins logs
-          curl -I http://localhost:8080 || exit 1
+          curl -I http://localhost:8080
