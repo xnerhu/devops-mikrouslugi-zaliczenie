@@ -44,7 +44,7 @@ pipeline {
         stage('Run Docker Container') {
             steps {
                 script {
-                    sh "docker run -d --name node-app-test -p 8080:8080 registry.gitlab.com/nersent/cloud/devops-zaliczenie:${env.BUILD_NUMBER}"
+                    sh "docker run -d --name node-app-test -p 3000:8080 registry.gitlab.com/nersent/cloud/devops-zaliczenie:${env.BUILD_NUMBER}"
                     
                     sh "docker ps -a"
                 }
@@ -54,7 +54,7 @@ pipeline {
         stage('Status test') {
             steps {
                 script {
-                    sh 'curl -f http://localhost:8080 || exit 1'
+                    sh 'curl -f http://localhost:3000 || exit 1'
                 }
             }
         }
