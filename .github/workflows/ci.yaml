@@ -1,5 +1,4 @@
 name: Jenkins Pipeline via apt
-
 on:
   push:
     branches: ["master"]
@@ -17,40 +16,53 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openjdk-11-jdk
 
-      - name: Import Jenkins GPG key & repo, then install Jenkins
+      - name: Install Jenkins from apt
         run: |
-          # Acquire and place the Jenkins GPG key
+          # Import Jenkins GPG key
           curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
             | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-          # Add Jenkins stable repo
+          # Add Jenkins repo
           echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" \
-            | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-          # Update and install
+            | sudo tee /etc/apt/sources.list.d/jenkins.list
+          # Update & install Jenkins
           sudo apt-get update
           sudo apt-get install -y jenkins
-
-      - name: Start Jenkins
-        run: |
+          # Start Jenkins
           sudo systemctl start jenkins
-          # Give Jenkins time to initialize
           sleep 30
-          # Print status (non-fatal if it fails)
           sudo systemctl status jenkins --no-pager || true
 
-      - name: Create Jenkins job from .github/jenkins_job.xml
+      - name: Install Pipeline plugins
         run: |
-          # Grab auto-generated admin password
+          # Jenkins must be running
+          # Grab the initial admin password so we can authenticate
           PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
-          # Download Jenkins CLI locally
+          # Download Jenkins CLI to manage plugins:
           curl -sSfL http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar -o jenkins-cli.jar
-          # Create the job "MyPipeline"
+
+          # The “workflow-aggregator” plugin essentially brings in the main pipeline plugins:
           java -jar jenkins-cli.jar \
             -auth "admin:${PASS}" \
-            -s http://127.0.0.1:8080/ create-job MyPipeline < .github/jenkins_job.xml
+            -s http://127.0.0.1:8080/ install-plugin workflow-aggregator
+
+          # Optionally: install other pipeline plugins if you need them
+          # java -jar jenkins-cli.jar -auth admin:$PASS -s http://127.0.0.1:8080/ install-plugin workflow-cps ...
+
+          # We must restart Jenkins so the plugin can load:
+          java -jar jenkins-cli.jar \
+            -auth "admin:${PASS}" \
+            -s http://127.0.0.1:8080/ safe-restart
+
+          # Wait a bit for Jenkins to come back:
+          sleep 60
+
+      - name: Create Jenkins job using .github/jenkins_job.xml
+        run: |
+          PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
+          curl -sSfL http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar -o jenkins-cli.jar
+          java -jar jenkins-cli.jar -auth "admin:${PASS}" -s http://127.0.0.1:8080/ create-job MyPipeline < .github/jenkins_job.xml
 
       - name: Build the Jenkins pipeline
         run: |
           PASS="$(sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
-          java -jar jenkins-cli.jar \
-            -auth "admin:${PASS}" \
-            -s http://127.0.0.1:8080/ build MyPipeline -f -v
+          java -jar jenkins-cli.jar -auth "admin:${PASS}" -s http://127.0.0.1:8080/ build MyPipeline -f -v
